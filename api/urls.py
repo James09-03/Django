@@ -1,10 +1,11 @@
 # api/urls.py
-from rest_framework.routers import DefaultRouter
-from .views import TodoItemViewSet
+from django.urls import path
+from . import views
 
-# Create a router and register our viewsets with it.
-router = DefaultRouter()
-router.register(r'todos', TodoItemViewSet) # Creates routes for /todos/ and /todos/{id}/
+urlpatterns = [
+    # Maps to todo_list_create (GET/POST)
+    path('todos/', views.todo_list_create, name='todo-list-create'),
 
-# The API URLs are now determined automatically by the router.
-urlpatterns = router.urls
+    # Maps to todo_detail_update_delete (GET/PUT/PATCH/DELETE)
+    path('todos/<int:pk>/', views.todo_detail_update_delete, name='todo-detail-update-delete'),
+]

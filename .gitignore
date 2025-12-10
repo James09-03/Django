@@ -7,6 +7,7 @@
 .env               # Environment variable file (for secrets)
 requirements.txt   # (Optional) If you generate this on a different OS/architecture
 
+
 # -----------------
 # 2. Python Specific Files
 # -----------------
