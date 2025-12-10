@@ -1,7 +1,7 @@
 # api/models.py
 
 from django.db import models
-from .dataclass.todo_dto import TodoItemDTO # Import the DTO from its new location
+from api.dataclass.todo_dto import TodoItemDTO # Import the DTO from its new location
 
 # --- MODEL DEFINITION ---
 class TodoItem(models.Model):

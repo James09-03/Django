@@ -3,7 +3,7 @@
 from rest_framework.decorators import api_view
 from rest_framework.response import Response
 from rest_framework import status
-# Note: get_object_or_404 is now handled inside the Controller
+# Note: get_object_or_404 is handled inside the Controller
 
 from .controllers import TodoController
 from .serializer import (
@@ -11,6 +11,10 @@ from .serializer import (
     TodoItemCreateRequestSerializer,
     TodoItemUpdateRequestSerializer
 )
+
+
+# Note: If your IDE requires it for type hinting, you may include the DTO import:
+# from .dataclass.todo_dto import TodoItemDTO
 
 
 # -----------------------------------------------
