@@ -1,0 +1,30 @@
+# .gitignore
+
+# -----------------
+# 1. Environment & Dependencies
+# -----------------
+.venv/             # Virtual environment folder
+.env               # Environment variable file (for secrets)
+requirements.txt   # (Optional) If you generate this on a different OS/architecture
+
+# -----------------
+# 2. Python Specific Files
+# -----------------
+__pycache__/       # Compiled cache files
+*.pyc
+*.pyd
+.ipynb_checkpoints/ # Jupyter Notebook checkpoints
+
+# -----------------
+# 3. Django/Database
+# -----------------
+db.sqlite3         # The default development database file
+/myproject/settings_local.py # If you use local settings for sensitive data
+
+# -----------------
+# 4. OS/Editor Specific
+# -----------------
+.DS_Store          # macOS temporary file
+*~                 # Backup files
+.vscode/           # Visual Studio Code workspace settings (optional)
+.idea/             # PyCharm/IntelliJ settings
