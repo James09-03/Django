@@ -1,44 +1,42 @@
-# api/views.py (TodoService - Updated to call Model directly)
+# api/views.py
 
-# Removed the import: from .controllers import TodoController
-from rest_framework.response import Response
-from rest_framework import status
-from typing import Dict, Any, List
+# 1. REMOVE duplicate and incorrect DTO import.
+#    We only need the DTO from its new, correct location.
+from api.dataclass.todo_dto import TodoItemDTO
 
-# New import for the Model/Repository
-from .model.todo_model import TodoItem
+# 2. CORRECT the import from todo_model:
+#    - 'TodoRepository' must be changed to 'TodoItemRepository'.
+#    - 'TodoItemDTO' is removed here to prevent the duplicate import warning/conflict.
+from .model.todo_model import TodoItemRepository, TodoDoesNotExist
 
 
+# The Service Layer methods now only deal with DTOs and the Repository
 class TodoService:
-    # ... (_create_success_response and _list_success_response helpers remain) ...
+    """
+    The Service Layer (Business Logic). Returns DTOs.
+    """
 
-    # ----------------------------------------------------
-    # CRUD Methods (Delegating to the Model/Repository)
-    # ----------------------------------------------------
+    def __init__(self):
+        # FIX: Instantiate the repository using the correct class name
+        self._todo_repository = TodoItemRepository()
 
-    def create_todo(self, validated_dto: Any) -> Response:
-        """Creates a todo item by delegating to the Model/Repository."""
-        new_dto = TodoItem.create_todo(validated_dto)  # <-- Direct call to Model
-        return self._create_success_response(new_dto, status.HTTP_201_CREATED)
+        # Keep the exception reference
+        self.DoesNotExist = TodoDoesNotExist
 
-    def get_all_todos(self) -> Response:
-        """Retrieves all todo items by delegating to the Model/Repository."""
-        dto_list = TodoItem.list_todos()  # <-- Direct call to Model
-        return self._list_success_response(dto_list)
+    def get_all_todos(self) -> list[TodoItemDTO]:
+        return self._todo_repository.get_all()
 
-    def get_todo_detail(self, pk: int) -> Response:
-        """Retrieves a single todo item by delegating to the Model/Repository."""
-        # Model handles 404
-        dto = TodoItem.get_todo_by_id(pk)  # <-- Direct call to Model
-        return self._create_success_response(dto, status.HTTP_200_OK)
+    def create_todo(self, validated_dto: TodoItemDTO) -> TodoItemDTO:
+        return self._todo_repository.create(validated_dto)
 
-    def update_todo(self, pk: int, validated_dto: Any) -> Response:
-        """Updates a todo item by delegating to the Model/Repository."""
-        updated_dto = TodoItem.update_todo(pk, validated_dto)  # <-- Direct call to Model
-        return self._create_success_response(updated_dto, status.HTTP_200_OK)
+    def get_todo_detail(self, pk: int) -> TodoItemDTO:
+        # Assuming you implemented get_by_id in your repository
+        return self._todo_repository.get_by_id(pk)
 
-    def delete_todo(self, pk: int) -> Response:
-        """Deletes a todo item by delegating to the Model/Repository."""
-        # Model handles 404 and deletion
-        TodoItem.delete_todo(pk)  # <-- Direct call to Model
-        return Response(status=status.HTTP_204_NO_CONTENT)
+    def update_todo(self, pk: int, validated_dto: TodoItemDTO) -> TodoItemDTO:
+        # Assuming you implemented update in your repository
+        return self._todo_repository.update(pk, validated_dto)
+
+    def delete_todo(self, pk: int):
+        # Assuming you implemented delete in your repository
+        self._todo_repository.delete(pk)
