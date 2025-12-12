@@ -1,11 +1,14 @@
 # api/urls.py
+
 from django.urls import path
-from . import views
+from . import controllers  # Import the file containing the controller class
 
 urlpatterns = [
-    # Maps to todo_list_create (GET/POST)
-    path('todos/', views.todo_list_create, name='todo-list-create'),
+    # Map LIST and CREATE methods
+    path('todos/', controllers.TodoViewController.create, name='todo-create'),
+    path('todos/', controllers.TodoViewController.get_all, name='todo-list'),
+    # Note: Will require splitting GET/POST in a cleaner way if using path() twice
 
-    # Maps to todo_detail_update_delete (GET/PUT/PATCH/DELETE)
-    path('todos/<int:pk>/', views.todo_detail_update_delete, name='todo-detail-update-delete'),
+    # Map DETAIL, UPDATE, DELETE methods
+    path('todos/<int:pk>/', controllers.TodoViewController.detail_operations, name='todo-detail'),
 ]

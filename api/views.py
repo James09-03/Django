@@ -1,94 +1,44 @@
-# api/views.py
+# api/views.py (TodoService - Updated to call Model directly)
 
-from rest_framework.decorators import api_view
+# Removed the import: from .controllers import TodoController
 from rest_framework.response import Response
 from rest_framework import status
-# Note: get_object_or_404 is handled inside the Controller
+from typing import Dict, Any, List
 
-from .controllers import TodoController
-from .serializer import (
-    TodoItemResponseSerializer,
-    TodoItemCreateRequestSerializer,
-    TodoItemUpdateRequestSerializer
-)
+# New import for the Model/Repository
+from .model.todo_model import TodoItem
 
 
-# Note: If your IDE requires it for type hinting, you may include the DTO import:
-# from .dataclass.todo_dto import TodoItemDTO
+class TodoService:
+    # ... (_create_success_response and _list_success_response helpers remain) ...
 
+    # ----------------------------------------------------
+    # CRUD Methods (Delegating to the Model/Repository)
+    # ----------------------------------------------------
 
-# -----------------------------------------------
-# A. CREATE and LIST (GET, POST)
-# -----------------------------------------------
-@api_view(['GET', 'POST'])
-def todo_list_create(request):
-    """
-    Handles LIST (GET) and CREATE (POST) requests.
-    Views focus only on HTTP and JSON interaction.
-    """
+    def create_todo(self, validated_dto: Any) -> Response:
+        """Creates a todo item by delegating to the Model/Repository."""
+        new_dto = TodoItem.create_todo(validated_dto)  # <-- Direct call to Model
+        return self._create_success_response(new_dto, status.HTTP_201_CREATED)
 
-    # 1. LIST OPERATION (GET)
-    if request.method == 'GET':
-        # Controller returns a list of DTOs
-        todo_dtos = TodoController.list_todos()
+    def get_all_todos(self) -> Response:
+        """Retrieves all todo items by delegating to the Model/Repository."""
+        dto_list = TodoItem.list_todos()  # <-- Direct call to Model
+        return self._list_success_response(dto_list)
 
-        # Serialize the list of DTOs directly (many=True for lists)
-        serializer = TodoItemResponseSerializer(instance=todo_dtos, many=True)
-        return Response(serializer.data)
+    def get_todo_detail(self, pk: int) -> Response:
+        """Retrieves a single todo item by delegating to the Model/Repository."""
+        # Model handles 404
+        dto = TodoItem.get_todo_by_id(pk)  # <-- Direct call to Model
+        return self._create_success_response(dto, status.HTTP_200_OK)
 
-    # 2. CREATE OPERATION (POST)
-    elif request.method == 'POST':
-        request_serializer = TodoItemCreateRequestSerializer(data=request.data)
+    def update_todo(self, pk: int, validated_dto: Any) -> Response:
+        """Updates a todo item by delegating to the Model/Repository."""
+        updated_dto = TodoItem.update_todo(pk, validated_dto)  # <-- Direct call to Model
+        return self._create_success_response(updated_dto, status.HTTP_200_OK)
 
-        if request_serializer.is_valid():
-            todo_dto = request_serializer.to_todo_dto()
-
-            # Controller returns the new DTO
-            new_dto = TodoController.create_todo(todo_dto)
-
-            # Serialize the single DTO for the 201 response
-            response_serializer = TodoItemResponseSerializer(instance=new_dto)
-            return Response(response_serializer.data, status=status.HTTP_201_CREATED)
-
-        return Response(request_serializer.errors, status=status.HTTP_400_BAD_REQUEST)
-
-
-# -----------------------------------------------
-# B. DETAIL, UPDATE, DELETE (GET, PUT, PATCH, DELETE)
-# -----------------------------------------------
-@api_view(['GET', 'PUT', 'PATCH', 'DELETE'])
-def todo_detail_update_delete(request, pk):
-    """
-    Handles operations on a single TodoItem (pk is the ID).
-    Views use the Controller for all data fetching and modification.
-    """
-
-    # 1. RETRIEVE OPERATION (GET)
-    if request.method == 'GET':
-        # Controller returns a single DTO (and handles 404)
-        todo_dto = TodoController.get_todo_by_id(pk)
-
-        response_serializer = TodoItemResponseSerializer(instance=todo_dto)
-        return Response(response_serializer.data)
-
-    # 2. DELETE OPERATION (DELETE)
-    elif request.method == 'DELETE':
-        # Delegate deletion to the Controller
-        TodoController.delete_todo(pk)
+    def delete_todo(self, pk: int) -> Response:
+        """Deletes a todo item by delegating to the Model/Repository."""
+        # Model handles 404 and deletion
+        TodoItem.delete_todo(pk)  # <-- Direct call to Model
         return Response(status=status.HTTP_204_NO_CONTENT)
-
-    # 3. UPDATE OPERATION (PUT/PATCH)
-    elif request.method in ['PUT', 'PATCH']:
-        partial = request.method == 'PATCH'
-        request_serializer = TodoItemUpdateRequestSerializer(data=request.data, partial=partial)
-
-        if request_serializer.is_valid():
-            todo_dto = request_serializer.to_todo_dto()
-
-            # Controller returns the updated DTO
-            updated_dto = TodoController.update_todo(pk, todo_dto)
-
-            response_serializer = TodoItemResponseSerializer(instance=updated_dto)
-            return Response(response_serializer.data)
-
-        return Response(request_serializer.errors, status=status.HTTP_400_BAD_REQUEST)

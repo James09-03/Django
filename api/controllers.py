@@ -1,69 +1,85 @@
-# api/controllers.py
+# api/controllers.py (Now acting as TodoViewController)
 
-from django.shortcuts import get_object_or_404
-from typing import List
-from .model.todo_model import TodoItem  # Updated Import Location
-from .dataclass.todo_dto import TodoItemDTO
+from rest_framework.decorators import api_view
+from rest_framework.request import Request
+from rest_framework.response import Response
+
+# Import the new Service Layer (the refactored views.py)
+from .views import TodoService
+
+# Import Serializers from their respective packages
+from .serializer.request import (
+    TodoItemCreateRequestSerializer,
+    TodoItemUpdateRequestSerializer
+)
 
 
-class TodoController:
+# NOTE: The SerializerValidations class is custom to your reference project.
+# Since we don't have it, we will manually perform the validation and DTO conversion
+# in the view functions, but keep the structure clean.
+
+class TodoViewController:
     """
-    Handles all core business logic and model interactions.
-    All public methods receive DTOs as input and return DTOs as output
-    to maintain a strict, clean architecture.
+    API Controller layer: Handles the HTTP request/response cycle,
+    performs validation, and delegates processing to the TodoService.
     """
 
-    @staticmethod
-    def list_todos() -> List[TodoItemDTO]:
-        """Returns all TodoItem instances converted to a list of DTOs."""
-        queryset = TodoItem.objects.all().order_by('created_at')
-        # Map the queryset to DTOs using the Model's to_dto() method
-        return [item.to_dto() for item in queryset]
+    # -----------------------------------------------
+    # A. CREATE
+    # -----------------------------------------------
+    @api_view(['POST'])
+    def create(request: Request) -> Response:
+        # 1. Validate incoming JSON data
+        request_serializer = TodoItemCreateRequestSerializer(data=request.data)
 
-    @staticmethod
-    def create_todo(dto: TodoItemDTO) -> TodoItemDTO:
-        """Creates a new TodoItem from the DTO and returns the resulting DTO."""
-        new_item = TodoItem.objects.create(
-            # Pass clean DTO attributes directly to the model creation
-            title=dto.title,
-            description=dto.description,
-            is_completed=dto.is_completed
-        )
-        # Convert the new Model instance back to DTO before returning
-        return new_item.to_dto()
+        if request_serializer.is_valid():
+            # 2. Convert validated data into DTO
+            todo_dto = request_serializer.to_todo_dto()
 
-    @staticmethod
-    def get_todo_by_id(todo_id: int) -> TodoItemDTO:
-        """Retrieves a single TodoItem or raises 404, returning the DTO."""
-        # Controller handles the database interaction and the 404 check
-        todo_item = get_object_or_404(TodoItem, pk=todo_id)
-        # Convert the Model instance to DTO before returning
-        return todo_item.to_dto()
+            # 3. Delegate to Service Layer
+            return TodoService().create_todo(validated_dto=todo_dto)
 
-    @staticmethod
-    def update_todo(todo_id: int, dto: TodoItemDTO) -> TodoItemDTO:
-        """Updates an existing TodoItem based on the DTO data and returns the resulting DTO."""
+        # Return validation errors
+        return Response(request_serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
-        # 1. Retrieve the object (Controller handles 404)
-        todo_item = get_object_or_404(TodoItem, pk=todo_id)
+    # -----------------------------------------------
+    # B. LIST
+    # -----------------------------------------------
+    @api_view(['GET'])
+    def get_all(request: Request) -> Response:
+        # 1. No request body to validate, just delegate
+        # 2. Delegate to Service Layer
+        return TodoService().get_all_todos()
 
-        # 2. Update model attributes using clean DTO data
-        # Note: In a production system, you might add logic here to only update
-        # fields present in the DTO if you were handling PATCH explicitly.
-        todo_item.title = dto.title
-        todo_item.description = dto.description
-        todo_item.is_completed = dto.is_completed
+    # -----------------------------------------------
+    # C. RETRIEVE, UPDATE, DELETE (Detail Operations)
+    # -----------------------------------------------
+    @api_view(['GET', 'PUT', 'PATCH', 'DELETE'])
+    def detail_operations(request: Request, pk: int) -> Response:
 
-        # 3. Save changes
-        todo_item.save()
+        # --- RETRIEVE (GET) ---
+        if request.method == 'GET':
+            return TodoService().get_todo_detail(pk=pk)
 
-        # 4. Convert the updated Model instance to DTO before returning
-        return todo_item.to_dto()
+        # --- DELETE (DELETE) ---
+        elif request.method == 'DELETE':
+            return TodoService().delete_todo(pk=pk)
 
-    @staticmethod
-    def delete_todo(todo_id: int):
-        """Deletes a TodoItem by ID (Controller handles the 404 check)."""
-        # Retrieve object first to ensure it exists before attempting delete
-        todo_item = get_object_or_404(TodoItem, pk=todo_id)
-        todo_item.delete()
-        # Returns None implicitly after successful deletion
+        # --- UPDATE (PUT/PATCH) ---
+        elif request.method in ['PUT', 'PATCH']:
+            # 1. Determine partial update
+            partial = request.method == 'PATCH'
+            request_serializer = TodoItemUpdateRequestSerializer(data=request.data, partial=partial)
+
+            if request_serializer.is_valid():
+                # 2. Convert validated data into DTO
+                todo_dto = request_serializer.to_todo_dto()
+
+                # 3. Delegate to Service Layer
+                return TodoService().update_todo(pk=pk, validated_dto=todo_dto)
+
+            # Return validation errors
+            return Response(request_serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+        # Default case (should be unreachable)
+        return Response(status=status.HTTP_405_METHOD_NOT_ALLOWED)
